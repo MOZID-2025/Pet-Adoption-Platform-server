@@ -35,8 +35,12 @@ async function run() {
     app.get("/pets", async (req, res) => {
       const cursor = petsCollection.find();
       const result = await cursor.toArray();
-      console.log(result);
+      res.send(result);
+    });
 
+    app.get("/featured", async (req, res) => {
+      const cursor = petsCollection.find().limit(6);
+      const result = await cursor.toArray();
       res.send(result);
     });
 
