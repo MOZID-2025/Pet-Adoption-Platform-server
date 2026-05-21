@@ -46,8 +46,6 @@ const verifyToken = async (req, res, next) => {
   }
   // console.log(req.headers, "from verify token");
 
-  // console.log(token);
-
   try {
     const { payload } = await jwtVerify(token, JWKS);
     console.log(payload);
