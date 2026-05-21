@@ -9,9 +9,6 @@ app.use(cors());
 app.use(express.json());
 
 const port = process.env.PORT || 8080;
-//pet-adoption
-//zHwBcxMQv2g9ETQu
-
 const uri = process.env.MONGODB_URI;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -76,9 +73,7 @@ async function run() {
     });
 
     app.get("/pets/:petsId", verifyToken, async (req, res) => {
-      //const petsId = req.params.petsId()
       const { petsId } = req.params;
-      //console.log(petsId);
       const query = { _id: new ObjectId(petsId) };
       const result = await petsCollection.findOne(query);
       res.send(result);
