@@ -9,7 +9,6 @@ app.use(cors());
 app.use(express.json());
 
 const port = process.env.PORT || 8080;
-
 //pet-adoption
 //zHwBcxMQv2g9ETQu
 
@@ -27,11 +26,11 @@ const client = new MongoClient(uri, {
 const JWKS = createRemoteJWKSet(
   new URL(`${process.env.CLIENT_URL}/api/auth/jwks`),
 );
-console.log(JWKS);
-const logger = (req, res, next) => {
-  console.log(`${req.method} | ${req.url}`);
-  next();
-};
+//console.log(JWKS);
+// const logger = (req, res, next) => {
+//   console.log(`${req.method} | ${req.url}`);
+//   next();
+// };
 
 const verifyToken = async (req, res, next) => {
   const { authorization } = req.headers;
@@ -62,7 +61,7 @@ const verifyToken = async (req, res, next) => {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
 
@@ -83,7 +82,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/pets/:petsId", logger, verifyToken, async (req, res) => {
+    app.get("/pets/:petsId", verifyToken, async (req, res) => {
       //const petsId = req.params.petsId()
       const { petsId } = req.params;
       //console.log(petsId);
@@ -102,12 +101,39 @@ async function run() {
       res.send(result);
     });
 
-    // post API
+    app.get("/my-requests", async (req, res) => {
+      const email = req.query.email;
 
+      const query = {
+        userEmail: email,
+      };
+
+      const result = await requestsCollection.find(query).toArray();
+
+      res.send(result);
+    });
+
+    // post API
     app.post("/pets", async (req, res) => {
       const newPet = req.body;
       const result = await petsCollection.insertOne(newPet);
       res.send(result);
+    });
+
+    app.post("/requests", async (req, res) => {
+      try {
+        const request = req.body;
+
+        const result = await requestsCollection.insertOne(request);
+
+        res.send(result);
+      } catch (error) {
+        console.log(error);
+
+        res.status(500).send({
+          message: "Failed To Create Request",
+        });
+      }
     });
 
     //delete API
@@ -152,6 +178,4 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
-});
+module.exports = app;
