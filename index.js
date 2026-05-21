@@ -10,8 +10,7 @@ const port = process.env.PORT || 8080;
 //pet-adoption
 //zHwBcxMQv2g9ETQu
 
-const uri =
-  "mongodb+srv://pet-adoption:zHwBcxMQv2g9ETQu@project-1.3gjxivd.mongodb.net/?appName=Project-1";
+const uri = process.env.MONGODB_URI;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -21,6 +20,11 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+const logger = (req, res, next) => {
+  console.log(`${req.method} | ${req.url}`);
+  next();
+};
 
 async function run() {
   try {
@@ -44,7 +48,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/pets/:petsId", async (req, res) => {
+    app.get("/pets/:petsId", logger, async (req, res) => {
       //const petsId = req.params.petsId()
       const { petsId } = req.params;
       //console.log(petsId);
