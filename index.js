@@ -2,9 +2,12 @@ const express = require("express");
 const dotenv = require("dotenv");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
+const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
 dotenv.config();
 const app = express();
 app.use(cors());
+app.use(express.json());
+
 const port = process.env.PORT || 8080;
 
 //pet-adoption
@@ -21,9 +24,39 @@ const client = new MongoClient(uri, {
   },
 });
 
+const JWKS = createRemoteJWKSet(
+  new URL(`${process.env.CLIENT_URL}/api/auth/jwks`),
+);
+console.log(JWKS);
 const logger = (req, res, next) => {
   console.log(`${req.method} | ${req.url}`);
   next();
+};
+
+const verifyToken = async (req, res, next) => {
+  const { authorization } = req.headers;
+
+  if (!authorization) {
+    return res.status(401).json({ message: "unauthorized" });
+  }
+
+  const token = authorization.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ message: "unauthorized" });
+  }
+  // console.log(req.headers, "from verify token");
+
+  // console.log(token);
+
+  try {
+    const { payload } = await jwtVerify(token, JWKS);
+    console.log(payload);
+
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
 };
 
 async function run() {
@@ -35,8 +68,10 @@ async function run() {
 
     const db = client.db("petAdoptionDB");
     const petsCollection = db.collection("petAdoption");
+    const requestsCollection = db.collection("requests");
 
     app.get("/pets", async (req, res) => {
+      console.log(req.query);
       const cursor = petsCollection.find();
       const result = await cursor.toArray();
       res.send(result);
@@ -48,12 +83,58 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/pets/:petsId", logger, async (req, res) => {
+    app.get("/pets/:petsId", logger, verifyToken, async (req, res) => {
       //const petsId = req.params.petsId()
       const { petsId } = req.params;
       //console.log(petsId);
       const query = { _id: new ObjectId(petsId) };
       const result = await petsCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.get("/my-pets", async (req, res) => {
+      const email = req.query.email;
+
+      const query = {
+        ownerEmail: email,
+      };
+      const result = await petsCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    // post API
+
+    app.post("/pets", async (req, res) => {
+      const newPet = req.body;
+      const result = await petsCollection.insertOne(newPet);
+      res.send(result);
+    });
+
+    //delete API
+
+    app.delete("/pets/:id", async (req, res) => {
+      const id = req.params.id;
+
+      const query = {
+        _id: new ObjectId(id),
+      };
+      const result = await petsCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // update API
+    app.patch("/requests/:id", async (req, res) => {
+      const id = req.params.id;
+      const { status } = req.body;
+      const query = {
+        _id: new ObjectId(id),
+      };
+      const updateDoc = {
+        $set: {
+          status,
+        },
+      };
+      const result = await requestsCollection.updateOne(query, updateDoc);
       res.send(result);
     });
 
