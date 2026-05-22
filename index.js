@@ -8,7 +8,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 8000;
 const uri = process.env.MONGODB_URI;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -60,19 +60,41 @@ async function run() {
     const requestsCollection = db.collection("requests");
 
     app.get("/pets", async (req, res) => {
-      console.log(req.query);
-      const cursor = petsCollection.find();
+      const { search = "", species = "", sort = "" } = req.query;
+
+      const query = {};
+
+      // SEARCH
+      if (search) {
+        query.petName = { $regex: search, $options: "i" };
+      }
+
+      // FILTER
+      if (species) {
+        query.species = species;
+      }
+
+      let cursor = petsCollection.find(query);
+
+      // SORT
+      if (sort === "low") {
+        cursor = cursor.sort({ price: 1 });
+      }
+
+      if (sort === "high") {
+        cursor = cursor.sort({ price: -1 });
+      }
+
       const result = await cursor.toArray();
       res.send(result);
     });
-
     app.get("/featured", async (req, res) => {
       const cursor = petsCollection.find().limit(6);
       const result = await cursor.toArray();
       res.send(result);
     });
 
-    app.get("/pets/:petsId", verifyToken, async (req, res) => {
+    app.get("/pets/:petsId", async (req, res) => {
       const { petsId } = req.params;
       const query = { _id: new ObjectId(petsId) };
       const result = await petsCollection.findOne(query);
@@ -91,7 +113,6 @@ async function run() {
 
     app.get("/my-requests", async (req, res) => {
       const email = req.query.email;
-
       const query = {
         userEmail: email,
       };
@@ -164,6 +185,9 @@ run().catch(console.dir);
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
+});
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
 });
 
 module.exports = app;
