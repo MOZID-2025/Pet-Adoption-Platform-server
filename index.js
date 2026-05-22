@@ -60,29 +60,19 @@ async function run() {
     const requestsCollection = db.collection("requests");
 
     app.get("/pets", async (req, res) => {
-      const { search = "", species = "", sort = "" } = req.query;
+      const { search } = req.query;
 
-      const query = {};
+      let cursor;
 
-      // SEARCH
       if (search) {
-        query.petName = { $regex: search, $options: "i" };
-      }
-
-      // FILTER
-      if (species) {
-        query.species = species;
-      }
-
-      let cursor = petsCollection.find(query);
-
-      // SORT
-      if (sort === "low") {
-        cursor = cursor.sort({ price: 1 });
-      }
-
-      if (sort === "high") {
-        cursor = cursor.sort({ price: -1 });
+        cursor = petsCollection.find({
+          petName: {
+            $regex: search,
+            $options: "i",
+          },
+        });
+      } else {
+        cursor = petsCollection.find();
       }
 
       const result = await cursor.toArray();
